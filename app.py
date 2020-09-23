@@ -1,10 +1,12 @@
 from flask import Flask,jsonify,request
 from flask import render_template
 import ast
+import happybase
 
 app = Flask(__name__)
 labels = []
 values = []
+
 
 @app.route("/")
 def get_chart_page():
@@ -13,12 +15,21 @@ def get_chart_page():
 	values = []
 	return render_template('chart.html', values=values, labels=labels)
 
+
 @app.route('/refreshData')
 def refresh_graph_data():
 	global labels, values
-	print("labels now: " + str(labels))
-	print("data now: " + str(values))
+	connection = happybase.Connection(host = 'localhost')
+	table = connection.table('hashtags')
+	labels = []
+	values = []
+	for key, data in table.rows([str(i) for i in range(0, 9)]):
+		# print(key, data)
+		labels.append(data['hashtag:name'])
+		values.append(data['hashtag:count'])
+	print("DEBUG: labels: {}, data: {}".format(str(labels), str(values)))
 	return jsonify(sLabel=labels, sData=values)
+
 
 @app.route('/updateData', methods=['POST'])
 def update_data():
@@ -30,6 +41,7 @@ def update_data():
 	print("labels received: " + str(labels))
 	print("data received: " + str(values))
 	return "success",201
-	
+
+
 if __name__ == "__main__":
 	app.run(host='localhost', port=5001)
